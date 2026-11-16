@@ -1,0 +1,19 @@
+claim: tokens
+arm_a: {way: agent, switches: {}}
+arm_b: {way: direct, switches: {}}
+measure: tokens
+gain: A - B
+sweeps: 5
+s_a: 2794.15
+s_b: 5.71
+delta: 3522
+n_needed: 5
+price_usd: 6.64
+bar: 5283
+group_floor: 0
+k: 3
+prediction:
+  arm: A
+  by: 51000
+  stratum: unusual
+  why: "RepoMind's recorded runs (fixtures/traces7) averaged about 53,000 tokens a run for the agent way and 1,800 for the direct call, a gap of about 51,000, and among the subset's tasks the agent's longest recorded route was on an unusual one (4602, the time zones, 13 calls and 87,000 tokens)."

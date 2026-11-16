@@ -1,0 +1,15 @@
+# Part C subset: claim 1 (tokens), agent vs direct. 10 tasks, at least 2 per stratum; every label has a maintainer's resolution or thread.
+# routine
+issue-4601
+issue-4612
+# unusual
+issue-4602
+issue-4604
+# adversarial
+issue-4610
+issue-4614
+issue-4631
+# should-not-act
+issue-4613
+issue-4628
+issue-4621

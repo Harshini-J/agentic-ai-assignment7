@@ -1,22 +1,191 @@
 {
-  "golden": {"version": null, "tasks": 0,
-             "strata": {"routine": 0, "unusual": 0, "adversarial": 0, "should_not_act": 0},
-             "decisions": {"act": 0, "refuse": 0, "stop": 0}, "thinnest": null},
-  "claim": {"claim": null, "measure": null, "gain": null, "k": null, "sweeps": null,
-            "s_a": null, "s_b": null, "delta": null, "n_needed": null, "price_usd": null,
-            "difference": null, "interval": null, "by_stratum": {}, "verdict": null},
+  "golden": {
+    "version": "v1",
+    "tasks": 28,
+    "strata": {
+      "routine": 7,
+      "unusual": 7,
+      "adversarial": 8,
+      "should_not_act": 6
+    },
+    "decisions": {
+      "act": 17,
+      "refuse": 5,
+      "stop": 6
+    },
+    "thinnest": "should_not_act"
+  },
+  "claim": {
+    "claim": "tokens",
+    "measure": "tokens",
+    "gain": "A - B",
+    "k": 3,
+    "sweeps": 5,
+    "s_a": 2794.15,
+    "s_b": 5.71,
+    "delta": 3522,
+    "n_needed": 5,
+    "price_usd": 6.64,
+    "difference": 55410.52,
+    "interval": [
+      52975.597577169014,
+      57845.44242283098
+    ],
+    "by_stratum": {
+      "routine": {
+        "difference": 61924.7,
+        "interval": [
+          59734.23613346762,
+          64115.16386653238
+        ]
+      },
+      "unusual": {
+        "difference": 74979.7,
+        "interval": [
+          62333.81165030309,
+          87625.5883496969
+        ]
+      },
+      "adversarial": {
+        "difference": 50755.13333333333,
+        "interval": [
+          48182.73621361276,
+          53327.5304530539
+        ]
+      },
+      "should_not_act": {
+        "difference": 42677.0,
+        "interval": [
+          39888.81937133573,
+          45465.18062866427
+        ]
+      }
+    },
+    "verdict": "holds"
+  },
   "arms": {
-    "A": {"way": null, "switches": {}, "runs": 0, "measure": {"mean": null, "sd": null},
-          "score": {"mean": null, "sd": null}, "pass_at_k": null, "pass_hat_k": null, "facts_share": null,
-          "cost_per_run_usd": null, "no_tools": 0, "by_stratum": {}},
-    "B": {"way": null, "switches": {}, "runs": 0, "measure": {"mean": null, "sd": null},
-          "score": {"mean": null, "sd": null}, "pass_at_k": null, "pass_hat_k": null, "facts_share": null,
-          "cost_per_run_usd": null, "no_tools": 0, "by_stratum": {}}
+    "A": {
+      "way": "agent",
+      "switches": {},
+      "runs": 50,
+      "measure": {
+        "mean": 57172.259999999995,
+        "sd": 2777.87874969373
+      },
+      "score": {
+        "mean": 62.0,
+        "sd": 4.47213595499958
+      },
+      "pass_at_k": 0.6599999999999999,
+      "pass_hat_k": 0.6,
+      "facts_share": 0.8914893617021277,
+      "cost_per_run_usd": 0.12725172,
+      "no_tools": 0,
+      "by_stratum": {
+        "routine": {
+          "runs": 10,
+          "measure": 63616.7,
+          "score": 100.0,
+          "pass_at_k": 1.0,
+          "pass_hat_k": 1.0
+        },
+        "unusual": {
+          "runs": 10,
+          "measure": 76898.4,
+          "score": 60.0,
+          "pass_at_k": 0.8,
+          "pass_hat_k": 0.5
+        },
+        "adversarial": {
+          "runs": 15,
+          "measure": 52516.86666666666,
+          "score": 100.0,
+          "pass_at_k": 1.0,
+          "pass_hat_k": 1.0
+        },
+        "should_not_act": {
+          "runs": 15,
+          "measure": 44380.6,
+          "score": 0.0,
+          "pass_at_k": 0.0,
+          "pass_hat_k": 0.0
+        }
+      }
+    },
+    "B": {
+      "way": "direct",
+      "switches": {},
+      "runs": 50,
+      "measure": {
+        "mean": 1761.7400000000002,
+        "sd": 5.245760192765253
+      },
+      "score": {
+        "mean": 0.0,
+        "sd": 0.0
+      },
+      "pass_at_k": 0.0,
+      "pass_hat_k": 0.0,
+      "facts_share": 0.8170212765957446,
+      "cost_per_run_usd": 0.0042382,
+      "no_tools": 0,
+      "by_stratum": {
+        "routine": {
+          "runs": 10,
+          "measure": 1692.0,
+          "score": 0.0,
+          "pass_at_k": 0.0,
+          "pass_hat_k": 0.0
+        },
+        "unusual": {
+          "runs": 10,
+          "measure": 1918.7,
+          "score": 0.0,
+          "pass_at_k": 0.0,
+          "pass_hat_k": 0.0
+        },
+        "adversarial": {
+          "runs": 15,
+          "measure": 1761.7333333333336,
+          "score": 0.0,
+          "pass_at_k": 0.0,
+          "pass_hat_k": 0.0
+        },
+        "should_not_act": {
+          "runs": 15,
+          "measure": 1703.6,
+          "score": 0.0,
+          "pass_at_k": 0.0,
+          "pass_hat_k": 0.0
+        }
+      }
+    }
   },
   "failures": [],
-  "grid": {"A": {}, "B": {}},
-  "judge": {"split": {"examples": 0, "tuning": 0, "test": 0}, "model": null,
-            "tpr": null, "tnr": null, "p": null, "corrected": null, "interval": null, "coin": null,
-            "flip_rate": null, "majority": {"tpr": null, "tnr": null, "kept": null}, "moved_share": null,
-            "by_system": {}}
+  "grid": {
+    "A": {},
+    "B": {}
+  },
+  "judge": {
+    "split": {
+      "examples": 0,
+      "tuning": 0,
+      "test": 0
+    },
+    "model": null,
+    "tpr": null,
+    "tnr": null,
+    "p": null,
+    "corrected": null,
+    "interval": null,
+    "coin": null,
+    "flip_rate": null,
+    "majority": {
+      "tpr": null,
+      "tnr": null,
+      "kept": null
+    },
+    "moved_share": null,
+    "by_system": {}
+  }
 }

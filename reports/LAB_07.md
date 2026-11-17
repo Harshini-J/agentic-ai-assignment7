@@ -99,14 +99,27 @@ I chose 28 of the pool's 40 issues on purpose, not at random. Each task is named
 
 - Each part of your prediction that missed, and the run that shows why: I correctly predicted that arm A would use more tokens and that the unusual stratum would have the largest gain (74,980). The size was slightly underestimated: I predicted about 51,000 tokens based on recorded runs (agent 53,271 per run, direct 1,817), but the actual gain was 55,411, or 8.6% higher. My prediction also fell below the 95% interval of 52,976 to 57,845. Run `agent-issue-4602-s03-173fb5` helps explain the difference: it used 121,382 tokens compared with 87,247 in the earlier recorded run. Issue 4602 required 108,000 to 121,000 tokens in three of the five sweeps, making it the largest single reason arm A's mean (57,172) exceeded the historical mean (53,271), which came from a different mix of issues.
 
-**Where the failed runs first went wrong** (slide 29), last good step down the side, first wrong step across.
+**Where the failed runs first went wrong** (slide 29), last good step down the side, first wrong step across. Every run of both arms whose grounded check failed is listed (19 for arm A, 50 for arm B); each run's pair is in `reports/LAB_07.json` under `failures`, produced by `scripts/first_failures.py`. A first wrong step is the earliest step that went wrong, not where the run finally broke; `stop` means a step the run never took, because it ended without it.
 
 ```
+arm A (agent): 19 failed runs
+| last good \ first wrong | code_search | issues_label |
+|---|---|---|
+| issues_read             | 11          | 4            |
+| code_read_file          | —           | 4            |
+
+arm B (direct): 50 failed runs
+| last good \ first wrong | issues_comment | stop |
+|---|---|---|
+| issues_read             | 23             | —    |
+| issues_comment          | —              | 27   |
 ```
 
-- The biggest count, and whether its cause is local, upstream or structural:
-- How a replay from Assignment 4's checkpoints would confirm it:
-- Runs that called no tool:
+- The biggest count, and whether its cause is local, upstream or structural: The largest cell is arm B's `issues_comment → stop`, with 27 runs. The comment was correct, but the run ended without applying a label or opening a PR. This is a structural problem (slide 29, "the plan had the wrong steps"): the direct way performs one read and one comment, with no label or PR step, so none of its runs could pass an act or refuse task, regardless of what the model wrote. Arm B's other cell, `issues_read → issues_comment` (23 runs), shows the same problem in two ways. On the 15 should-not-act runs, it always commented when the correct action was to do nothing. On issue 4612 (5 runs) and 4604 (3 runs), the comment itself was wrong about the file or label. Arm A's largest cell, `issues_read → code_search` (11 runs, all should-not-act tasks), is structural for another reason: the agent's loop has no way to decide that an issue needs no action. Even after reading an issue that was fixed, withdrawn, or marked "please ignore", it continued searching the code. Together with four `issues_read → issues_label` failures on the same tasks, where it labelled the issue immediately after reading, these account for all 15 should-not-act runs. Arm A's remaining four failures were `code_read_file → issues_label` on issue 4604, where it labelled intended behaviour as a bug despite the maintainers' explanation that it was by design.
+
+- How a replay from Assignment 4's checkpoints would confirm it: Neither arm uses checkpoints (their traces contain no checkpoint lines), so no Part C run can be resumed directly. Instead, the replay must use the planned way, which supports Assignment 4's checkpointer. Run issue 4601 using the planned way, stop it after its first search step, and resume with `python run.py --resume <run_id>`. If the resumed run applies a label and opens a PR, it shows that the steps missing from the direct way come from the way's design rather than the model, supporting a structural cause. A local cause would mean the same way could sometimes succeed on replay. The recorded planned run `planned-issue-4601-s01-117542` already applied a label, opened a PR, and passed. The same approach applies to arm A's should-not-act failures: the recorded planned run on 4621 escalated without making changes, so a resumed planned run on 4621 should stop instead of continuing to search the code.
+
+- Runs that called no tool: 0 in arm A and 0 in arm B. Every run read its issue at least once, so none showed the no-tool failure described on slide 28.
 
 ## Part D · Validate a judge
 

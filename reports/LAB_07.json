@@ -161,10 +161,440 @@
       }
     }
   },
-  "failures": [],
+  "failures": [
+    {
+      "run_id": "agent-issue-4604-s01-7b92d3",
+      "arm": "A",
+      "last_good": "code_read_file",
+      "first_wrong": "issues_label"
+    },
+    {
+      "run_id": "agent-issue-4604-s02-2fca14",
+      "arm": "A",
+      "last_good": "code_read_file",
+      "first_wrong": "issues_label"
+    },
+    {
+      "run_id": "agent-issue-4604-s03-589d52",
+      "arm": "A",
+      "last_good": "code_read_file",
+      "first_wrong": "issues_label"
+    },
+    {
+      "run_id": "agent-issue-4604-s05-4f3a82",
+      "arm": "A",
+      "last_good": "code_read_file",
+      "first_wrong": "issues_label"
+    },
+    {
+      "run_id": "agent-issue-4613-s01-f3878c",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "code_search"
+    },
+    {
+      "run_id": "agent-issue-4613-s02-e7bff6",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "code_search"
+    },
+    {
+      "run_id": "agent-issue-4613-s03-840aee",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "code_search"
+    },
+    {
+      "run_id": "agent-issue-4613-s04-57a6b0",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "code_search"
+    },
+    {
+      "run_id": "agent-issue-4613-s05-71a168",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "code_search"
+    },
+    {
+      "run_id": "agent-issue-4621-s01-ac2e55",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "code_search"
+    },
+    {
+      "run_id": "agent-issue-4621-s02-89db70",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "code_search"
+    },
+    {
+      "run_id": "agent-issue-4621-s03-0691ca",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "code_search"
+    },
+    {
+      "run_id": "agent-issue-4621-s04-9c240f",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "code_search"
+    },
+    {
+      "run_id": "agent-issue-4621-s05-6748fc",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "code_search"
+    },
+    {
+      "run_id": "agent-issue-4628-s01-0cdb2d",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "code_search"
+    },
+    {
+      "run_id": "agent-issue-4628-s02-f06b3a",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "issues_label"
+    },
+    {
+      "run_id": "agent-issue-4628-s03-c3c634",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "issues_label"
+    },
+    {
+      "run_id": "agent-issue-4628-s04-3f9857",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "issues_label"
+    },
+    {
+      "run_id": "agent-issue-4628-s05-33b8bd",
+      "arm": "A",
+      "last_good": "issues_read",
+      "first_wrong": "issues_label"
+    },
+    {
+      "run_id": "direct-issue-4601-s01-1924b0",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4601-s02-c09fcb",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4601-s03-e5e477",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4601-s04-c6065f",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4601-s05-e43230",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4602-s01-07a475",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4602-s02-031f6f",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4602-s03-948784",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4602-s04-d7abea",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4602-s05-db3d22",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4604-s01-301837",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4604-s02-6a8a10",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4604-s03-6bef19",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4604-s04-547da9",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4604-s05-dd2384",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4610-s01-3ff647",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4610-s02-d7e6a8",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4610-s03-d29474",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4610-s04-fa94d8",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4610-s05-3acfde",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4612-s01-d64b83",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4612-s02-3d639c",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4612-s03-9966e0",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4612-s04-434c41",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4612-s05-8fd21b",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4613-s01-522062",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4613-s02-e283ac",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4613-s03-a64a9c",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4613-s04-78b701",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4613-s05-b045ac",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4614-s01-a01cc6",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4614-s02-6e02cc",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4614-s03-a02513",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4614-s04-e09f6f",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4614-s05-dc9de1",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4621-s01-72610b",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4621-s02-0f5818",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4621-s03-4dcac0",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4621-s04-914c46",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4621-s05-2cefa8",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4628-s01-cdae62",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4628-s02-fb38d3",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4628-s03-e426d6",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4628-s04-dd52c3",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4628-s05-d79138",
+      "arm": "B",
+      "last_good": "issues_read",
+      "first_wrong": "issues_comment"
+    },
+    {
+      "run_id": "direct-issue-4631-s01-4d5df8",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4631-s02-dbe85c",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4631-s03-ca63b6",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4631-s04-62e661",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    },
+    {
+      "run_id": "direct-issue-4631-s05-9c0ec5",
+      "arm": "B",
+      "last_good": "issues_comment",
+      "first_wrong": "stop"
+    }
+  ],
   "grid": {
-    "A": {},
-    "B": {}
+    "A": {
+      "code_read_file": {
+        "issues_label": 4
+      },
+      "issues_read": {
+        "code_search": 11,
+        "issues_label": 4
+      }
+    },
+    "B": {
+      "issues_comment": {
+        "stop": 27
+      },
+      "issues_read": {
+        "issues_comment": 23
+      }
+    }
   },
   "judge": {
     "split": {

@@ -5,7 +5,8 @@ section 15.10).
     python -m eval.judge freeze        # pin the judge: its prompt, model and settings (eval/judge/frozen.json)
     python -m eval.judge test 1        # run 1 on the test set: eval/judge/verdicts/test_1.jsonl
     python -m eval.judge versions      # the test items' list and long versions: versions.jsonl
-    python -m eval.judge recorded      # the agent way's recorded comments: recorded.jsonl
+    python -m eval.judge recorded      # judge the agent way's recorded comments, correct the pass rate, bound it
+    python -m eval.judge correction    # print that correction again from the verdict files: no model calls
 
 Your judge reads one output, its issue and what RepoMind's tools returned, and
 answers with slide 36's fixed reply: JSON with a one-line "reasoning", then an
@@ -31,6 +32,8 @@ import csv
 import hashlib
 import itertools
 import json
+import math
+import random
 import re
 import sys
 import time
@@ -58,11 +61,20 @@ class CoinJudge(ValueError):
     correct it (slide 44)."""
 
 
+def is_coin(tpr: float, tnr: float) -> bool:
+    """TPR + TNR within 0.1 of 1: the judge is no better than a coin. Rounded first, so that float noise
+    cannot decide the boundary (0.55 + 0.55 - 1 is 0.10000000000000009 in floats and 0.1 in arithmetic)."""
+    return abs(round(tpr + tnr - 1, 9)) <= 0.1
+
+
 def correct(p: float, tpr: float, tnr: float) -> float:
     """The share you would pass, labelling by hand, from the judge's pass rate p on
     outputs nobody labelled: (p + TNR - 1) / (TPR + TNR - 1) (slide 44), clipped to
     0 to 1. Raises CoinJudge when TPR + TNR is within 0.1 of 1."""
-    raise NotImplementedError("Part D, task 5")
+    if is_coin(tpr, tnr):
+        raise CoinJudge(f"TPR + TNR is {tpr + tnr:.3f}, within 0.1 of 1: the judge is no better than a coin, "
+                        "so its pass rate cannot be corrected. Fix the judge; do not correct it (slide 44)")
+    return min(1.0, max(0.0, (p + tnr - 1) / (tpr + tnr - 1)))
 
 
 def rates(verdicts: dict[str, str], labels: dict[str, str]) -> tuple[float, float]:
@@ -84,13 +96,101 @@ def bootstrap(verdicts: dict[str, str], labels: dict[str, str], p: float,
               resamples: int = 2000, seed: int = 0) -> tuple[float, float]:
     """The middle 95% of the corrected rate over resamples of the test items, drawn
     with replacement, as many as there are, each time recomputing TPR and TNR
-    (slide 44). A resample on which the judge is a coin is left out."""
-    raise NotImplementedError("Part D, task 5")
+    (slide 44). A resample on which the judge is a coin is left out.
+
+    A resample with no labelled pass or no labelled fail has no TPR or no TNR, so it is left out too. The
+    interval is the 2.5th and 97.5th of the sorted corrected rates, taken at index int(q * (n - 1))."""
+    items = [i for i in labels if i in verdicts]
+    rng = random.Random(seed)
+    got: list[float] = []
+    for _ in range(resamples):
+        draw = [rng.choice(items) for _ in items]
+        n_pass = sum(1 for i in draw if str(labels[i]).lower() == "pass")
+        n_fail = len(draw) - n_pass
+        if not n_pass or not n_fail:
+            continue
+        tpr = sum(1 for i in draw if str(labels[i]).lower() == "pass" and str(verdicts[i]).lower() == "pass") / n_pass
+        tnr = sum(1 for i in draw if str(labels[i]).lower() == "fail" and str(verdicts[i]).lower() == "fail") / n_fail
+        if is_coin(tpr, tnr):
+            continue
+        got.append(correct(p, tpr, tnr))
+    if not got:
+        raise ValueError("no resample of the test items gave a judge that is not a coin: there is no interval to report")
+    got.sort()
+    return got[int(0.025 * (len(got) - 1))], got[int(0.975 * (len(got) - 1))]
+
+
+def exact_lower_bound(correct_items: int, n: int, alpha: float = 0.05) -> float:
+    """The exact (Clopper-Pearson) lower bound of a share seen as `correct_items` of `n`: how low the true rate
+    can be and still give a result this good with probability alpha / 2. For a perfect score it is (alpha/2)^(1/n)."""
+    if correct_items <= 0:
+        return 0.0
+    def tail(q: float) -> float:        # P(X >= correct_items) when the true rate is q
+        return sum(math.comb(n, i) * q ** i * (1 - q) ** (n - i) for i in range(correct_items, n + 1))
+    lo, hi = 0.0, 1.0
+    for _ in range(80):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if tail(mid) < alpha / 2 else (lo, mid)
+    return (lo + hi) / 2
+
+
+def sensitivity(p: float, tpr: float, tnr: float, tpr_lo: float, tnr_lo: float) -> tuple[float, float] | None:
+    """How far the corrected rate could move if the judge's true rates were anywhere between their exact lower
+    bounds and what the test set showed: the lowest and highest corrected rate over the four corners of that
+    box, leaving out corners where the judge would be a coin. A low true TNR means more false passes, so it pulls
+    the corrected rate down; a low true TPR pushes it up. None when every corner is a coin."""
+    values = [correct(p, t, n) for t in {tpr_lo, tpr} for n in {tnr_lo, tnr} if not is_coin(t, n)]
+    return (min(values), max(values)) if values else None
 
 
 def load_outputs(root: Path = ROOT) -> dict[str, dict]:
     """The 60 outputs to label, by ID (section 15.9)."""
     return {p.stem: json.loads(p.read_text()) for p in sorted((root / "fixtures" / "judge" / "outputs").glob("*.json"))}
+
+
+# -- the recorded runs of the agent way (Part D, task 5): outputs nobody labelled ---------------------
+
+TRACES = ROOT / "fixtures" / "traces7"
+POOL = ROOT / "fixtures" / "issues" / "pool"
+COMMENT_WRITES = ("issues_comment", "post_comment")
+
+
+def read_trace_lines(path: Path) -> list[dict]:
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+def pool_issue(number: int) -> dict:
+    """An issue as the outputs hold it: {"number", "title", "body"}, from fixtures/issues/pool/<n>.md: the title
+    unescaped, the body without the front matter and without the sentinel comment."""
+    text = (POOL / f"{number}.md").read_text()
+    _, front, body = text.split("---\n", 2)
+    title = re.search(r"^title:\s*(.*)$", front, flags=re.M).group(1).replace('\\"', '"').strip()
+    body = re.sub(r"\s*<!--\s*sentinel:.*?-->\s*", "\n", body, flags=re.S).strip()      # the blank lines around it become one newline
+    return {"number": number, "title": title, "body": body}
+
+
+def recorded_with_comment(traces: Path = TRACES) -> list[str]:
+    """The IDs of the recorded runs of the agent way that posted a comment (a comment write that did not fail)."""
+    ids = []
+    for path in sorted(traces.glob("*.jsonl")):
+        if path.name.startswith("s27") or ".calls" in path.name:
+            continue
+        lines = read_trace_lines(path)
+        if lines and lines[0].get("way") == "agent" and any(
+                x.get("type") == "tool_call" and x.get("name") in COMMENT_WRITES and not x.get("is_error") for x in lines):
+            ids.append(lines[0].get("run_id") or path.stem)
+    return ids
+
+
+def recorded_output(run_id: str, traces: Path = TRACES) -> dict:
+    """One recorded run as a judge input, shaped like fixtures/judge/outputs/*.json: its issue, the tool calls it made
+    before it commented (each with its whole result), and the last comment it posted, as its end state holds it."""
+    lines = read_trace_lines(traces / f"{run_id}.jsonl")
+    state = json.loads((traces / f"{run_id}.state.json").read_text())
+    evidence = [{"tool": x["name"], "input": x["input"], "result": str(x.get("result", ""))}
+                for x in lines if x.get("type") == "tool_call" and x["name"] not in COMMENT_WRITES and not x.get("is_error")]
+    comments = state["state"][str(state["issue"])]["comments"]
+    return {"id": run_id, "issue": pool_issue(int(state["issue"])), "evidence": evidence, "comment": comments[-1]}
 
 
 # -- the labels and the split -----------------------------------------------------------------
@@ -196,9 +296,9 @@ def judge_one(session, output: dict, system: str, numbers) -> dict:
             "model": response.model}                  # the version that served the call, as the API reports it
 
 
-def run(ids: list[str], name: str, backend: str | None = None) -> list[dict]:
+def run(ids: list[str], name: str, backend: str | None = None, outputs: dict[str, dict] | None = None) -> list[dict]:
     """The judge over these outputs, in one metered session (its tokens and cost are recorded and priced)."""
-    outputs, system = load_outputs(), system_prompt()
+    outputs, system = outputs or load_outputs(), system_prompt()
     numbers, verdicts = itertools.count(), []
     with judge_session(name, backend) as session:
         for i in ids:
@@ -250,6 +350,48 @@ def report(verdicts: list[dict], labels: dict[str, str], where: str) -> None:
           f"TNR {tnr:.3f} ({N - fp}/{N} labelled fails failed) | TPR + TNR = {tpr + tnr:.3f}")
 
 
+def show_correction(verdicts: list[dict], tests: Path, labels: dict[str, str], split: dict, out: Path, wrote: bool = True) -> int:
+    """Print the recorded runs' pass rate, corrected with the test set's TPR and TNR (run 1), with its bootstrap
+    interval and how far it could move; write eval/judge/correction.json. Spends no tokens."""
+    passed = sum(1 for v in verdicts if v["answer"] == "pass")
+    p = passed / len(verdicts)
+    test_v = {v["id"]: v["answer"] for v in map(json.loads, tests.read_text().splitlines()) if v}
+    test_l = {i: labels[i] for i in split["test"]}
+    tpr, tnr = rates(test_v, test_l)
+    n_pass = sum(1 for i in test_l if test_l[i] == "pass"); n_fail = len(test_l) - n_pass
+    print(f"recorded runs of the agent way that posted a comment: {len(verdicts)} judged, {passed} passed: p = {p:.3f}")
+    print(f"the judge's rates on the test set (run 1): TPR {tpr:.3f}, TNR {tnr:.3f}, TPR + TNR = {tpr + tnr:.3f}")
+    summary = {"p": p, "tpr": tpr, "tnr": tnr, "recorded": len(verdicts), "coin": is_coin(tpr, tnr)}
+    target = ROOT / "eval" / "judge" / "correction.json"
+    try:
+        raw = (p + tnr - 1) / (tpr + tnr - 1) if not is_coin(tpr, tnr) else None
+        corrected = correct(p, tpr, tnr)
+    except CoinJudge as exc:
+        print(f"REFUSED: {exc}")
+        summary.update(corrected=None, interval=None)
+        target.write_text(json.dumps(summary, indent=2) + "\n")
+        return 1
+    lo, hi = bootstrap(test_v, test_l, p)
+    print(f"corrected pass rate: {corrected:.3f}" + (f"   (the formula gave {raw:.3f}, clipped to 0..1)" if raw != corrected else "")
+          + f"   95% bootstrap interval {lo:.3f} to {hi:.3f}   (2,000 resamples of the {len(test_l)} test items)")
+    if lo == hi and tpr == 1.0 and tnr == 1.0:
+        print("note: the interval has no width: a judge that was right on every test item is right on every item of "
+              "every resample, so the bootstrap sees no judge error to carry. It is not a bound on the judge.")
+    elif lo == hi and raw != corrected:
+        print(f"note: the interval is one point because the corrected rate is clipped to {corrected:.0f} in every resample: "
+              "the pass rate is at least as high (or low) as the judge's errors can explain.")
+    tpr_lo = exact_lower_bound(round(tpr * n_pass), n_pass); tnr_lo = exact_lower_bound(round(tnr * n_fail), n_fail)
+    box = sensitivity(p, tpr, tnr, tpr_lo, tnr_lo)
+    print(f"what the test set cannot rule out: with {n_pass} passes and {n_fail} fails, an exact 95% interval puts the true TPR at "
+          f"{tpr_lo:.3f} or more and the true TNR at {tnr_lo:.3f} or more; for true rates anywhere in that range the corrected rate would lie between "
+          + (f"{box[0]:.3f} and {box[1]:.3f}" if box else "nothing defined (the judge would be a coin)"))
+    summary.update(corrected=corrected, interval=[lo, hi], tpr_lower=tpr_lo, tnr_lower=tnr_lo,
+                   sensitivity=list(box) if box else None)
+    target.write_text(json.dumps(summary, indent=2) + "\n")
+    print(f"wrote {out.relative_to(ROOT)} and eval/judge/correction.json" if wrote else "wrote eval/judge/correction.json")
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="command", required=True)
@@ -262,7 +404,10 @@ def main(argv=None) -> int:
     te.add_argument("--backend", default=None)
     te.add_argument("--force", action="store_true", help="overwrite a verdict file that exists")
     sub.add_parser("versions", help="(a later task) the test items' list and long versions")
-    sub.add_parser("recorded", help="(a later task) the agent way's recorded comments")
+    rc = sub.add_parser("recorded", help="judge the agent way's recorded comments, correct the pass rate, bound it")
+    rc.add_argument("--backend", default=None)
+    rc.add_argument("--force", action="store_true", help="overwrite a verdict file that exists")
+    sub.add_parser("correction", help="print the correction again from recorded.jsonl and test_1.jsonl; spends no tokens")
     a = ap.parse_args(argv)
     labels, split = load_labels(), load_split()
 
@@ -302,6 +447,30 @@ def main(argv=None) -> int:
         report(verdicts, labels, f"test run {a.n}")
         print(f"wrote {out.relative_to(ROOT)}")
         return 0
+
+    if a.command == "recorded":
+        scripted = a.backend == SCRIPTED
+        if not scripted:
+            frozen_check()
+        tests = VERDICTS / ("scripted_test_1.jsonl" if scripted else "test_1.jsonl")
+        if not tests.exists():
+            raise SystemExit(f"{tests.relative_to(ROOT)} does not exist: run `test 1` first, its TPR and TNR are what "
+                             "corrects the pass rate")
+        out = VERDICTS / ("scripted_recorded.jsonl" if scripted else "recorded.jsonl")
+        if out.exists() and not a.force:
+            raise SystemExit(f"{out.relative_to(ROOT)} exists (pass --force only if the run failed)")
+        ids = recorded_with_comment()
+        verdicts = run(ids, "recorded", a.backend, {i: recorded_output(i) for i in ids})
+        write_verdicts(out, verdicts)
+        return show_correction(verdicts, tests, labels, split, out)
+
+    if a.command == "correction":
+        out, tests = VERDICTS / "recorded.jsonl", VERDICTS / "test_1.jsonl"
+        for f in (out, tests):
+            if not f.exists():
+                raise SystemExit(f"{f.relative_to(ROOT)} does not exist: run `test 1` and `recorded` first")
+        verdicts = [json.loads(line) for line in out.read_text().splitlines() if line.strip()]
+        return show_correction(verdicts, tests, labels, split, out, wrote=False)
 
     raise SystemExit(f"`{a.command}` is a later task of Part D")
 

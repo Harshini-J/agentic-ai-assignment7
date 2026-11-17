@@ -4,7 +4,8 @@ section 15.10).
     python -m eval.judge tune          # refine the prompt: the tuning set, and the examples not in the prompt
     python -m eval.judge freeze        # pin the judge: its prompt, model and settings (eval/judge/frozen.json)
     python -m eval.judge test 1        # run 1 on the test set: eval/judge/verdicts/test_1.jsonl
-    python -m eval.judge versions      # the test items' list and long versions: versions.jsonl
+    python -m eval.judge versions      # the test items' list and long versions: versions.jsonl, and how many verdicts moved
+    python -m eval.judge moved         # print that result again from versions.jsonl: no model calls
     python -m eval.judge recorded      # judge the agent way's recorded comments, correct the pass rate, bound it
     python -m eval.judge correction    # print that correction again from the verdict files: no model calls
     python -m eval.judge flips         # after test runs 1 to 3: the flip rate, the majority of three, for_a_person.txt
@@ -447,6 +448,60 @@ def show_consistency(labels: dict[str, str], split: dict) -> int:
     return 0
 
 
+# -- formatting and length: does the verdict move when only the presentation does? (slide 38) ----------
+
+VERSION_KINDS = ("list", "long")
+
+
+def moved_items(versions: list[dict], run1: dict[str, str]) -> dict[str, list[str]]:
+    """{item: the versions whose verdict differs from run 1's verdict on the original}: an item moved when either
+    its list version or its long version got a different verdict (checks/FORMATS.md, section 15.10)."""
+    moved: dict[str, list[str]] = {}
+    for v in versions:
+        if str(v["answer"]).lower() != str(run1[v["id"]]).lower():
+            moved.setdefault(v["id"], []).append(v["version"])
+    return moved
+
+
+def version_outputs(ids: list[str]) -> dict[str, dict]:
+    """The judge's inputs for the list and the long version of each item: the same issue and evidence, with the
+    comment replaced by the version (the substance is the same, the presentation is not). Keyed `jNN:list`."""
+    base = load_outputs()
+    return {f"{i}:{kind}": {**base[i], "comment": base[i]["versions"][kind]} for i in ids for kind in VERSION_KINDS}
+
+
+def show_versions(rows: list[dict], tests: Path, labels: dict[str, str], split: dict) -> int:
+    """Report the share of test items whose verdict moved, version by version, and write
+    eval/judge/versions_summary.json. Spends no tokens."""
+    run1 = {v["id"]: v["answer"] for v in map(json.loads, tests.read_text().splitlines()) if v}
+    test = split["test"]
+    wanted = sorted((i, k) for i in test for k in VERSION_KINDS)
+    if sorted((v["id"], v["version"]) for v in rows) != wanted:
+        raise SystemExit("versions.jsonl must judge each test item's list and long versions once")
+    moved = moved_items(rows, run1)
+    test_l = {i: labels[i] for i in test}
+    summary = {"items": len(test), "moved_share": len(moved) / len(test), "moved": moved, "by_version": {}}
+    print(f"{len(rows)} judgements: the list and the long version of each of the {len(test)} test items")
+    for kind in VERSION_KINDS:
+        part = {v["id"]: v["answer"] for v in rows if v["version"] == kind}
+        tpr, tnr = rates(part, test_l)
+        n_moved = sum(1 for i in part if part[i] != run1[i])
+        summary["by_version"][kind] = {"moved": n_moved, "tpr": tpr, "tnr": tnr}
+        print(f"  {kind:4} version: {n_moved} of {len(test)} verdicts differ from run 1 | against the labels: TPR {tpr:.3f}, TNR {tnr:.3f}")
+    print(f"moved: {len(moved)} of {len(test)} test items = {len(moved) / len(test):.3f}"
+          + (f": {', '.join(sorted(moved))}" if moved else ": no verdict moved with the formatting or the length"))
+    for i in sorted(moved):
+        for v in rows:
+            if v["id"] == i and v["version"] in moved[i]:
+                print(f"  {i} ({v['version']}): label {labels[i]}, run 1 {run1[i]}, this version {v['answer']}: {v['reasoning']}")
+    if moved:
+        print("the verdict should not move with the form (slide 38): fix one output format, or add a line telling the "
+              "judge what to ignore; either change makes a new judge, to tune, freeze and validate again")
+    (ROOT / "eval" / "judge" / "versions_summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+    print("wrote eval/judge/versions_summary.json")
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="command", required=True)
@@ -458,7 +513,10 @@ def main(argv=None) -> int:
     te.add_argument("n", type=int, choices=(1, 2, 3))
     te.add_argument("--backend", default=None)
     te.add_argument("--force", action="store_true", help="overwrite a verdict file that exists")
-    sub.add_parser("versions", help="(a later task) the test items' list and long versions")
+    ve = sub.add_parser("versions", help="judge the list and long versions of every test item and report how many verdicts moved")
+    ve.add_argument("--backend", default=None)
+    ve.add_argument("--force", action="store_true", help="overwrite a verdict file that exists")
+    sub.add_parser("moved", help="print the formatting and length result again from versions.jsonl; spends no tokens")
     rc = sub.add_parser("recorded", help="judge the agent way's recorded comments, correct the pass rate, bound it")
     rc.add_argument("--backend", default=None)
     rc.add_argument("--force", action="store_true", help="overwrite a verdict file that exists")
@@ -519,6 +577,31 @@ def main(argv=None) -> int:
         verdicts = run(ids, "recorded", a.backend, {i: recorded_output(i) for i in ids})
         write_verdicts(out, verdicts)
         return show_correction(verdicts, tests, labels, split, out)
+
+    if a.command == "versions":
+        scripted = a.backend == SCRIPTED
+        if not scripted:
+            frozen_check()
+        tests = VERDICTS / ("scripted_test_1.jsonl" if scripted else "test_1.jsonl")
+        if not tests.exists():
+            raise SystemExit(f"{tests.relative_to(ROOT)} does not exist: run `test 1` first, the versions are compared with it")
+        out = VERDICTS / ("scripted_versions.jsonl" if scripted else "versions.jsonl")
+        if out.exists() and not a.force:
+            raise SystemExit(f"{out.relative_to(ROOT)} exists (pass --force only if the run failed)")
+        outputs = version_outputs(split["test"])
+        verdicts = run(list(outputs), "versions", a.backend, outputs)
+        for key, v in zip(outputs, verdicts):
+            v["version"] = key.split(":")[1]
+        write_verdicts(out, verdicts)
+        return show_versions(verdicts, tests, labels, split)
+
+    if a.command == "moved":
+        out, tests = VERDICTS / "versions.jsonl", VERDICTS / "test_1.jsonl"
+        for f in (out, tests):
+            if not f.exists():
+                raise SystemExit(f"{f.relative_to(ROOT)} does not exist: run `test 1` and `versions` first")
+        rows = [json.loads(line) for line in out.read_text().splitlines() if line.strip()]
+        return show_versions(rows, tests, labels, split)
 
     if a.command == "flips":
         return show_consistency(labels, split)

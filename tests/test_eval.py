@@ -449,5 +449,39 @@ class TestConsistency(unittest.TestCase):
             judge.consistency([dict(self.LABELS), {"a": "pass"}, dict(self.LABELS)], self.LABELS)
 
 
+class TestFormattingAndLength(unittest.TestCase):
+    """Slide 38: does the verdict move when only the presentation does?"""
+
+    def test_an_item_moved_when_either_version_differs_from_run_1(self):
+        run1 = {"a": "pass", "b": "fail", "c": "pass"}
+        rows = [{"id": "a", "version": "list", "answer": "pass"}, {"id": "a", "version": "long", "answer": "pass"},
+                {"id": "b", "version": "list", "answer": "fail"}, {"id": "b", "version": "long", "answer": "pass"},
+                {"id": "c", "version": "list", "answer": "fail"}, {"id": "c", "version": "long", "answer": "fail"}]
+        self.assertEqual(judge.moved_items(rows, run1), {"b": ["long"], "c": ["list", "long"]})
+
+    def test_nothing_moves_when_every_version_agrees_with_run_1(self):
+        run1 = {"a": "pass", "b": "fail"}
+        rows = [{"id": i, "version": k, "answer": run1[i]} for i in run1 for k in ("list", "long")]
+        self.assertEqual(judge.moved_items(rows, run1), {})
+
+    def test_the_version_inputs_keep_the_issue_and_evidence_and_change_only_the_comment(self):
+        split = judge.load_split()
+        outputs = judge.version_outputs(split["test"])
+        self.assertEqual(len(outputs), 2 * len(split["test"]))
+        base = judge.load_outputs()
+        for key, out in outputs.items():
+            i, kind = key.split(":")
+            self.assertEqual(out["id"], i)
+            self.assertEqual(out["evidence"], base[i]["evidence"])
+            self.assertEqual(out["issue"], base[i]["issue"])
+            self.assertEqual(out["comment"], base[i]["versions"][kind])
+            self.assertNotEqual(out["comment"], base[i]["comment"])
+
+    def test_the_versions_are_not_told_which_model_wrote_them(self):
+        key = next(iter(judge.version_outputs(judge.load_split()["test"])))
+        out = judge.version_outputs(judge.load_split()["test"])[key]
+        self.assertNotIn(judge.load_outputs()[out["id"]]["system"], judge.user_message(out))
+
+
 if __name__ == "__main__":
     unittest.main()

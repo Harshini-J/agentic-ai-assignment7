@@ -35,7 +35,7 @@ j33,pass,xlsx.ts was read: amountFormat sets the amount numFmt; the issue says C
 j34,fail,gives 'line 11 of src/report.tsx'; the only search hit in that file is line 8 and a read has no line numbers (line 3)
 j35,pass,money.ts was read: /^\d+(\.\d+)?$/ needs a digit before the point so .75 and -.75 return null; schema.ts was read: it then throws errors.badAmount
 j36,pass,UploadForm.tsx was read: a file picker with setFile and no drop handler; the request is in the issue
-j37,pass,"the five issue numbers are in the issue, and 'opened by other customers' is the issue's own wording; it claims nothing else"
+j37,fail,"says GET /api/v1/health answers 401 with {""error"": ""missing bearer token""} without a token; health.ts (the only file read) has no auth check and that message is in no result (lines 2, 6)"
 j38,pass,reports.ts was read: PATCH calls firstRunAt(patch.schedule) only when a schedule is sent; scheduler.ts: weekly is +7 days at RUN_HOUR_UTC 6; Monday to Thursday is in the issue
 j39,pass,report.tsx was read: {report.deliveredTo.length} recipients with the word fixed; the PR id matches
 j40,fail,"quotes a maintainer: 'resending a schedule should never move the run day'; it appears in neither the issue nor any result (lines 6, 11)"

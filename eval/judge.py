@@ -8,6 +8,7 @@ section 15.10).
     python -m eval.judge moved         # print that result again from versions.jsonl: no model calls
     python -m eval.judge recorded      # judge the agent way's recorded comments, correct the pass rate, bound it
     python -m eval.judge correction    # print that correction again from the verdict files: no model calls
+    python -m eval.judge systems       # the judge's TPR and TNR on each system's test items: no model calls
     python -m eval.judge flips         # after test runs 1 to 3: the flip rate, the majority of three, for_a_person.txt
 
 Your judge reads one output, its issue and what RepoMind's tools returned, and
@@ -502,6 +503,69 @@ def show_versions(rows: list[dict], tests: Path, labels: dict[str, str], split: 
     return 0
 
 
+# -- the judge on each system's outputs (slide 46): does it pass more of one system's bad outputs? ------
+
+def by_system(verdicts: dict[str, str], labels: dict[str, str], systems: dict[str, str],
+              lengths: dict[str, int] | None = None) -> dict[str, dict]:
+    """The judge's TPR and TNR on each system's items alone, the labelled fails of that system it passed, and the
+    mean comment length of its items (whether one system simply writes more). A system with no labelled pass or no
+    labelled fail has no TPR or no TNR there: that rate is None."""
+    out: dict[str, dict] = {}
+    for system in sorted({systems[i] for i in labels if i in verdicts and systems.get(i)}):
+        mine = {i: labels[i] for i in labels if i in verdicts and systems.get(i) == system}
+        passes = [i for i in mine if mine[i] == "pass"]; fails = [i for i in mine if mine[i] == "fail"]
+        passed_ok = sum(1 for i in passes if str(verdicts[i]).lower() == "pass")
+        failed_ok = sum(1 for i in fails if str(verdicts[i]).lower() == "fail")
+        entry = {"items": len(mine), "passes": len(passes), "fails": len(fails),
+                 "tpr": passed_ok / len(passes) if passes else None, "tnr": failed_ok / len(fails) if fails else None,
+                 "bad_outputs_passed": len(fails) - failed_ok,
+                 "tnr_lower": exact_lower_bound(failed_ok, len(fails)) if fails else None,
+                 "tpr_lower": exact_lower_bound(passed_ok, len(passes)) if passes else None}
+        if lengths:
+            entry["mean_comment_chars"] = sum(lengths[i] for i in mine) / len(mine)
+            entry["mean_chars_of_fails"] = sum(lengths[i] for i in fails) / len(fails) if fails else None
+        out[system] = entry
+    return out
+
+
+def show_by_system(labels: dict[str, str], split: dict) -> int:
+    outputs = load_outputs()
+    systems = {i: o.get("system") for i, o in outputs.items()}
+    lengths = {i: len(o["comment"]) for i, o in outputs.items()}
+    test_l = {i: labels[i] for i in split["test"]}
+    runs = {}
+    for n in (1, 2, 3):
+        path = VERDICTS / f"test_{n}.jsonl"
+        if path.exists():
+            runs[n] = {v["id"]: v["answer"] for v in map(json.loads, filter(None, path.read_text().splitlines()))}
+    if 1 not in runs:
+        raise SystemExit("eval/judge/verdicts/test_1.jsonl does not exist: run `test 1` first")
+    result = by_system(runs[1], test_l, systems, lengths)
+    print("the judge on each system's test items, run 1 (the judge is not told which model wrote a comment):")
+    for system, r in result.items():
+        print(f"  {system}: {r['items']} items ({r['passes']} labelled passes, {r['fails']} labelled fails) | "
+              f"TPR {r['tpr']:.3f} | TNR {r['tnr']:.3f} | bad outputs it passed: {r['bad_outputs_passed']} of {r['fails']} "
+              f"| mean comment length {r['mean_comment_chars']:.0f} characters")
+    for n in sorted(runs):
+        row = by_system(runs[n], test_l, systems)
+        print(f"  run {n}: " + " | ".join(f"{sy.split('-')[1]} TPR {r['tpr']:.3f} TNR {r['tnr']:.3f}" for sy, r in row.items()))
+    names = list(result)
+    if len(names) == 2:
+        a, b = (result[x] for x in names)
+        print(f"does it pass more of one system's bad outputs? {names[0]}: {a['bad_outputs_passed']} of {a['fails']}; "
+              f"{names[1]}: {b['bad_outputs_passed']} of {b['fails']}"
+              + ("; no difference on this test set" if a["bad_outputs_passed"] / a["fails"] == b["bad_outputs_passed"] / b["fails"] else ""))
+        print("what this cannot show: with so few labelled fails per system, an exact 95% interval puts each system's true TNR at "
+              + " and ".join(f"{r['tnr_lower']:.3f} or more ({sy.split('-')[1]}, {r['fails']} fails)" for sy, r in result.items())
+              + ": a lean toward one system as large as that cannot be ruled out")
+        lw = {sy: r["mean_chars_of_fails"] for sy, r in result.items()}
+        print("does one system write more? mean length of the labelled fails: " + ", ".join(f"{sy.split('-')[1]} {v:.0f}" for sy, v in lw.items()) + " characters")
+    summary = {sy: {k: r[k] for k in ("tpr", "tnr", "items", "passes", "fails", "bad_outputs_passed", "tnr_lower", "tpr_lower")} for sy, r in result.items()}
+    (ROOT / "eval" / "judge" / "by_system.json").write_text(json.dumps(summary, indent=2) + "\n")
+    print("wrote eval/judge/by_system.json")
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="command", required=True)
@@ -520,6 +584,7 @@ def main(argv=None) -> int:
     rc = sub.add_parser("recorded", help="judge the agent way's recorded comments, correct the pass rate, bound it")
     rc.add_argument("--backend", default=None)
     rc.add_argument("--force", action="store_true", help="overwrite a verdict file that exists")
+    sub.add_parser("systems", help="the judge's TPR and TNR on each system's test items; spends no tokens")
     sub.add_parser("flips", help="the flip rate over test runs 1 to 3, the majority of three, and for_a_person.txt; spends no tokens")
     sub.add_parser("correction", help="print the correction again from recorded.jsonl and test_1.jsonl; spends no tokens")
     a = ap.parse_args(argv)
@@ -602,6 +667,9 @@ def main(argv=None) -> int:
                 raise SystemExit(f"{f.relative_to(ROOT)} does not exist: run `test 1` and `versions` first")
         rows = [json.loads(line) for line in out.read_text().splitlines() if line.strip()]
         return show_versions(rows, tests, labels, split)
+
+    if a.command == "systems":
+        return show_by_system(labels, split)
 
     if a.command == "flips":
         return show_consistency(labels, split)

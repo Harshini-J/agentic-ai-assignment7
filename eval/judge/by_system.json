@@ -1,0 +1,22 @@
+{
+  "claude-haiku-5-5": {
+    "tpr": 1.0,
+    "tnr": 1.0,
+    "items": 14,
+    "passes": 9,
+    "fails": 5,
+    "bad_outputs_passed": 0,
+    "tnr_lower": 0.4781762498950185,
+    "tpr_lower": 0.6637328831200571
+  },
+  "claude-sonnet-5-5": {
+    "tpr": 1.0,
+    "tnr": 1.0,
+    "items": 12,
+    "passes": 8,
+    "fails": 4,
+    "bad_outputs_passed": 0,
+    "tnr_lower": 0.3976353643835253,
+    "tpr_lower": 0.6305833524471807
+  }
+}

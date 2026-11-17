@@ -483,5 +483,56 @@ class TestFormattingAndLength(unittest.TestCase):
         self.assertNotIn(judge.load_outputs()[out["id"]]["system"], judge.user_message(out))
 
 
+class TestBySystem(unittest.TestCase):
+    """Slide 46: does the judge pass more of one system's bad outputs?"""
+
+    LABELS = {"a1": "pass", "a2": "pass", "a3": "fail", "a4": "fail", "b1": "pass", "b2": "pass", "b3": "fail", "b4": "fail"}
+    SYSTEMS = {"a1": "A", "a2": "A", "a3": "A", "a4": "A", "b1": "B", "b2": "B", "b3": "B", "b4": "B"}
+
+    def test_a_judge_that_is_right_on_everything_has_perfect_rates_on_each_system(self):
+        r = judge.by_system(dict(self.LABELS), self.LABELS, self.SYSTEMS)
+        for system in ("A", "B"):
+            self.assertEqual((r[system]["tpr"], r[system]["tnr"]), (1.0, 1.0))
+            self.assertEqual(r[system]["bad_outputs_passed"], 0)
+
+    def test_a_lean_toward_one_system_shows_in_its_tnr_alone(self):
+        verdicts = dict(self.LABELS)
+        verdicts["b3"] = "pass"                                # one of system B's bad outputs gets through
+        r = judge.by_system(verdicts, self.LABELS, self.SYSTEMS)
+        self.assertEqual(r["A"]["tnr"], 1.0)
+        self.assertEqual(r["B"]["tnr"], 0.5)
+        self.assertEqual(r["B"]["bad_outputs_passed"], 1)
+        self.assertEqual(r["B"]["tpr"], 1.0)
+
+    def test_the_overall_rates_are_the_pooled_ones(self):
+        verdicts = dict(self.LABELS); verdicts["b3"] = "pass"
+        self.assertEqual(judge.rates(verdicts, self.LABELS), (1.0, 0.75))
+
+    def test_a_system_with_no_labelled_fail_has_no_tnr(self):
+        labels = {"a1": "pass", "a2": "fail", "b1": "pass"}
+        r = judge.by_system(dict(labels), labels, {"a1": "A", "a2": "A", "b1": "B"})
+        self.assertIsNone(r["B"]["tnr"])
+        self.assertEqual(r["B"]["tpr"], 1.0)
+
+    def test_it_reports_how_much_each_system_writes(self):
+        lengths = {i: (100 if self.SYSTEMS[i] == "A" else 300) for i in self.LABELS}
+        r = judge.by_system(dict(self.LABELS), self.LABELS, self.SYSTEMS, lengths)
+        self.assertEqual((r["A"]["mean_comment_chars"], r["B"]["mean_comment_chars"]), (100, 300))
+
+    def test_a_few_fails_leave_the_true_rate_open(self):
+        r = judge.by_system(dict(self.LABELS), self.LABELS, self.SYSTEMS)
+        self.assertAlmostEqual(r["A"]["tnr_lower"], 0.025 ** (1 / 2), places=6)    # 2 fails, both caught: at least 0.158
+        self.assertLess(r["A"]["tnr_lower"], 0.2)
+
+    def test_the_real_test_set_has_labelled_passes_and_fails_for_both_systems(self):
+        split, labels = judge.load_split(), judge.load_labels()
+        systems = {i: o["system"] for i, o in judge.load_outputs().items()}
+        r = judge.by_system({i: labels[i] for i in split["test"]}, {i: labels[i] for i in split["test"]}, systems)
+        self.assertEqual(len(r), 2)
+        for system, row in r.items():
+            self.assertGreaterEqual(row["passes"], 3, system)
+            self.assertGreaterEqual(row["fails"], 3, system)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -396,5 +396,58 @@ class TestRecordedRuns(unittest.TestCase):
         self.assertIn(out["issue"]["title"], judge.user_message(out))
 
 
+class TestConsistency(unittest.TestCase):
+    """Slides 45 and 46: three runs, the flip rate and a majority that must win to be kept."""
+
+    LABELS = {"a": "pass", "b": "pass", "c": "pass", "d": "fail", "e": "fail", "f": "fail"}
+
+    def test_a_judge_that_never_changes_has_no_flips(self):
+        right = dict(self.LABELS)
+        c = judge.consistency([right, dict(right), dict(right)], self.LABELS)
+        self.assertEqual(c["flips"], [])
+        self.assertEqual(c["flip_rate"], 0.0)
+
+    def test_an_item_whose_verdict_changed_is_a_flip(self):
+        r1 = dict(self.LABELS); r2 = dict(self.LABELS); r3 = dict(self.LABELS)
+        r2["b"] = "fail"; r3["e"] = "pass"
+        c = judge.consistency([r1, r2, r3], self.LABELS)
+        self.assertEqual(sorted(c["flips"]), ["b", "e"])
+        self.assertAlmostEqual(c["flip_rate"], 2 / 6)
+
+    def test_the_majority_is_two_of_three(self):
+        r1 = dict(self.LABELS); r2 = dict(self.LABELS); r3 = dict(self.LABELS)
+        r2["b"] = "fail"                                   # one run in three fails b: the majority still passes it
+        r3["b"] = "fail"                                   # two in three fail it: the majority fails it
+        c = judge.consistency([r1, r2, r3], self.LABELS)
+        self.assertEqual(c["majority_verdicts"]["b"], "fail")
+        self.assertEqual(c["majority_verdicts"]["a"], "pass")
+
+    def test_a_majority_that_ties_the_best_run_is_not_kept(self):
+        right = dict(self.LABELS)
+        c = judge.consistency([right, dict(right), dict(right)], self.LABELS)
+        self.assertEqual((c["majority"]["tpr"], c["majority"]["tnr"]), (1.0, 1.0))
+        self.assertFalse(c["majority"]["kept"])            # equal to the best single run is not a win
+
+    def test_a_majority_that_beats_every_single_run_is_kept(self):
+        r1 = dict(self.LABELS); r2 = dict(self.LABELS); r3 = dict(self.LABELS)
+        r1["a"] = "fail"; r2["b"] = "fail"; r3["d"] = "pass"      # each run has one error, in a different place
+        c = judge.consistency([r1, r2, r3], self.LABELS)
+        for r in c["runs"]:
+            self.assertLess(r["tpr"] + r["tnr"], 2.0)
+        self.assertEqual((c["majority"]["tpr"], c["majority"]["tnr"]), (1.0, 1.0))
+        self.assertTrue(c["majority"]["kept"])
+
+    def test_a_majority_worse_than_the_best_run_is_not_kept(self):
+        r1 = dict(self.LABELS); r2 = dict(self.LABELS); r3 = dict(self.LABELS)
+        r2["a"] = "fail"; r3["a"] = "fail"                  # a shared lean: two runs make the same error, the majority keeps it
+        c = judge.consistency([r1, r2, r3], self.LABELS)
+        self.assertEqual(c["best_run"], 1)
+        self.assertFalse(c["majority"]["kept"])
+
+    def test_every_run_must_judge_the_same_items(self):
+        with self.assertRaises(ValueError):
+            judge.consistency([dict(self.LABELS), {"a": "pass"}, dict(self.LABELS)], self.LABELS)
+
+
 if __name__ == "__main__":
     unittest.main()

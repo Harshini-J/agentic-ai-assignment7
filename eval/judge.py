@@ -7,6 +7,7 @@ section 15.10).
     python -m eval.judge versions      # the test items' list and long versions: versions.jsonl
     python -m eval.judge recorded      # judge the agent way's recorded comments, correct the pass rate, bound it
     python -m eval.judge correction    # print that correction again from the verdict files: no model calls
+    python -m eval.judge flips         # after test runs 1 to 3: the flip rate, the majority of three, for_a_person.txt
 
 Your judge reads one output, its issue and what RepoMind's tools returned, and
 answers with slide 36's fixed reply: JSON with a one-line "reasoning", then an
@@ -392,6 +393,60 @@ def show_correction(verdicts: list[dict], tests: Path, labels: dict[str, str], s
     return 0
 
 
+# -- consistency: three runs, the flip rate and a majority (slides 45 and 46) -------------------------
+
+PERSON = ROOT / "eval" / "judge" / "for_a_person.txt"
+
+
+def consistency(runs: list[dict[str, str]], labels: dict[str, str]) -> dict:
+    """What three runs of the same judge on the same items show: the items whose verdict changed (the flips, each
+    one for a person), the flip rate, each run's TPR and TNR, the majority's, and whether the majority is kept.
+
+    A majority is an ensemble of one model, and three copies of one model share its lean (slide 46), so it is kept
+    only if it wins: on the same labels its TPR + TNR must be strictly higher than the best single run's. A tie is
+    not a win; it costs three runs for nothing."""
+    missing = [n for n, r in enumerate(runs, 1) if set(r) != set(labels)]
+    if missing:
+        raise ValueError(f"every run must judge exactly the test items; run(s) {missing} do not")
+    ids = list(labels)
+    flips = [i for i in ids if len({str(r[i]).lower() for r in runs}) > 1]
+    majority = {i: "pass" if sum(1 for r in runs if str(r[i]).lower() == "pass") * 2 > len(runs) else "fail" for i in ids}
+    singles = [rates({i: r[i] for i in ids}, {i: labels[i] for i in ids}) for r in runs]
+    m_tpr, m_tnr = rates(majority, {i: labels[i] for i in ids})
+    best = max(range(len(runs)), key=lambda k: singles[k][0] + singles[k][1])
+    kept = (m_tpr + m_tnr) > (singles[best][0] + singles[best][1]) + 1e-12
+    return {"items": len(ids), "flips": flips, "flip_rate": len(flips) / len(ids) if ids else 0.0,
+            "runs": [{"tpr": t, "tnr": n} for t, n in singles], "majority": {"tpr": m_tpr, "tnr": m_tnr, "kept": kept},
+            "best_run": best + 1, "majority_verdicts": majority}
+
+
+def show_consistency(labels: dict[str, str], split: dict) -> int:
+    runs = []
+    for n in (1, 2, 3):
+        path = VERDICTS / f"test_{n}.jsonl"
+        if not path.exists():
+            raise SystemExit(f"{path.relative_to(ROOT)} does not exist: run `python -m eval.judge test {n}` first")
+        rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+        runs.append({v["id"]: v["answer"] for v in rows})
+    test_l = {i: labels[i] for i in split["test"]}
+    c = consistency(runs, test_l)
+    for n, r in enumerate(c["runs"], 1):
+        print(f"test run {n}: TPR {r['tpr']:.3f}, TNR {r['tnr']:.3f}, TPR + TNR = {r['tpr'] + r['tnr']:.3f}")
+    print(f"flip rate: {len(c['flips'])} of {c['items']} test items changed verdict between the three runs = {c['flip_rate']:.3f}"
+          + (f": {', '.join(c['flips'])}" if c["flips"] else ""))
+    m = c["majority"]; b = c["runs"][c["best_run"] - 1]
+    print(f"majority of three: TPR {m['tpr']:.3f}, TNR {m['tnr']:.3f}, TPR + TNR = {m['tpr'] + m['tnr']:.3f} "
+          f"| best single run (run {c['best_run']}): {b['tpr'] + b['tnr']:.3f}")
+    tie = abs((m["tpr"] + m["tnr"]) - (b["tpr"] + b["tnr"])) < 1e-12
+    print("the majority is " + ("KEPT: it beats the best single run on the same labels" if m["kept"] else
+          "NOT kept: it does not beat the best single run on the same labels" + (" (it ties it, and a tie is not a win)" if tie else "")
+          + ", and it costs three runs"))
+    PERSON.write_text("".join(f"{i}\n" for i in c["flips"]))
+    (ROOT / "eval" / "judge" / "consistency.json").write_text(json.dumps({k: v for k, v in c.items() if k != "majority_verdicts"}, indent=2) + "\n")
+    print(f"wrote {PERSON.relative_to(ROOT)} ({len(c['flips'])} IDs, each for a person) and eval/judge/consistency.json")
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="command", required=True)
@@ -407,6 +462,7 @@ def main(argv=None) -> int:
     rc = sub.add_parser("recorded", help="judge the agent way's recorded comments, correct the pass rate, bound it")
     rc.add_argument("--backend", default=None)
     rc.add_argument("--force", action="store_true", help="overwrite a verdict file that exists")
+    sub.add_parser("flips", help="the flip rate over test runs 1 to 3, the majority of three, and for_a_person.txt; spends no tokens")
     sub.add_parser("correction", help="print the correction again from recorded.jsonl and test_1.jsonl; spends no tokens")
     a = ap.parse_args(argv)
     labels, split = load_labels(), load_split()
@@ -463,6 +519,9 @@ def main(argv=None) -> int:
         verdicts = run(ids, "recorded", a.backend, {i: recorded_output(i) for i in ids})
         write_verdicts(out, verdicts)
         return show_correction(verdicts, tests, labels, split, out)
+
+    if a.command == "flips":
+        return show_consistency(labels, split)
 
     if a.command == "correction":
         out, tests = VERDICTS / "recorded.jsonl", VERDICTS / "test_1.jsonl"

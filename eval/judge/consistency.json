@@ -1,0 +1,25 @@
+{
+  "items": 26,
+  "flips": [],
+  "flip_rate": 0.0,
+  "runs": [
+    {
+      "tpr": 1.0,
+      "tnr": 1.0
+    },
+    {
+      "tpr": 1.0,
+      "tnr": 1.0
+    },
+    {
+      "tpr": 1.0,
+      "tnr": 1.0
+    }
+  ],
+  "majority": {
+    "tpr": 1.0,
+    "tnr": 1.0,
+    "kept": false
+  },
+  "best_run": 1
+}

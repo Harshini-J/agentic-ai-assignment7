@@ -598,24 +598,36 @@
   },
   "judge": {
     "split": {
-      "examples": 0,
-      "tuning": 0,
-      "test": 0
+      "examples": 8,
+      "tuning": 26,
+      "test": 26
     },
-    "model": null,
-    "tpr": null,
-    "tnr": null,
-    "p": null,
-    "corrected": null,
-    "interval": null,
-    "coin": null,
-    "flip_rate": null,
+    "model": "claude-sonnet-5",
+    "tpr": 1.0,
+    "tnr": 1.0,
+    "p": 0.9,
+    "corrected": 0.8999999999999999,
+    "interval": [
+      0.8999999999999999,
+      0.8999999999999999
+    ],
+    "coin": false,
+    "flip_rate": 0.0,
     "majority": {
-      "tpr": null,
-      "tnr": null,
-      "kept": null
+      "tpr": 1.0,
+      "tnr": 1.0,
+      "kept": false
     },
-    "moved_share": null,
-    "by_system": {}
+    "moved_share": 0.038461538461538464,
+    "by_system": {
+      "claude-haiku-5-5": {
+        "tpr": 1.0,
+        "tnr": 1.0
+      },
+      "claude-sonnet-5-5": {
+        "tpr": 1.0,
+        "tnr": 1.0
+      }
+    }
   }
 }

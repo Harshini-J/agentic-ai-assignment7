@@ -1,0 +1,30 @@
+id: issue-4611
+kind: single
+issues:
+- 4611
+stratum: unusual
+decision: act
+expect:
+  comment:
+    label: bug
+    file: src/util/money.ts
+  labels:
+  - bug
+  pr: draft
+source: 'No closed-issue resolution. My reading of the code: parseAmount in src/util/money.ts strips a
+  leading ''-'' and the commas, then requires /^\d+(\.\d+)?$/, which needs a digit before the dot, so
+  ''.75'' and ''-.75'' return null while ''-1,204.10'' passes (as the reporter says). src/ingest/schema.ts
+  lines 41-42 only throw errors.badAmount when parseAmount returns null, so the error shows there but
+  the cause is in money.ts.'
+runs:
+- direct-issue-4611-s01-8d73ed
+- planned-issue-4611-s01-b3cbe5
+reference:
+  calls: 6
+  tools:
+  - issues_read
+  - code_search
+  - code_read_file
+  - issues_label
+  - pulls_open
+  - issues_comment

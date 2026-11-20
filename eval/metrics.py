@@ -56,5 +56,104 @@ def canonical(value) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
+MIN_ID_CHARS = 3        # an identifier shorter than this never counts as a use
+
+
+def _calls(lines: list[dict]) -> list[dict]:
+    """The run's calls: every `tool_call` line, in order, whatever it returned (a resumed
+    run's calls before and after its `resume` line included)."""
+    return [l for l in lines if l.get("type") == "tool_call"]
+
+
+def _values(value) -> list[str]:
+    """The values of a tool input as text: not null, not an object, a list's items one by one,
+    numbers and booleans written as Python's str() writes them."""
+    if value is None or isinstance(value, dict):
+        return []
+    if isinstance(value, (list, tuple)):
+        return [t for item in value for t in _values(item)]
+    return [str(value)]
+
+
+def _identifiers(call: dict) -> list[tuple[str, bool]]:
+    """What a read's output could be used by, each as (text, is_path): the paths it returned,
+    or, when it returned none, the values in its input. Only three characters or more count."""
+    paths = [p for p in (call.get("paths") or []) if isinstance(p, str)]
+    if paths:
+        ids = [(p, True) for p in paths]
+    else:
+        ids = [(v, False) for v in (t for value in (call.get("input") or {}).values() for t in _values(value))]
+    return [(text, is_path) for text, is_path in ids if len(text) >= MIN_ID_CHARS]
+
+
+def _appears(identifier: str, is_path: bool, text: str) -> bool:
+    """`identifier` appears in `text`, ignoring case; anything with a "/" in it, a returned
+    path or a path in the input, also appears when its file name alone does
+    (`exportUtils.ts` for `src/exportUtils.ts`), as the checker counts it."""
+    ident = identifier.lower()
+    if ident in text:
+        return True
+    if "/" in ident:
+        name = ident.rsplit("/", 1)[-1]
+        return len(name) >= MIN_ID_CHARS and name in text
+    return False
+
+
+def _final_comment(calls: list[dict]) -> str:
+    """The `body` of the run's last call in COMMENT_WRITES, in lower case; "" when it made none."""
+    for call in reversed(calls):
+        if call.get("name") in COMMENT_WRITES:
+            return str((call.get("input") or {}).get("body", "")).lower()
+    return ""
+
+
+def _orphans(calls: list[dict]) -> int:
+    """The reads whose output no later step uses (slide 26). A read is a call that is not in
+    WRITES; it is used when one of its identifiers appears in a later call's canonical input or
+    in the run's final comment. A read with no identifier of three characters or more has
+    nothing that could be used, so it is an orphan."""
+    comment = _final_comment(calls)
+    later_text = [canonical(c.get("input")).lower() for c in calls]
+    n = 0
+    for i, call in enumerate(calls):
+        if call.get("name") in WRITES:
+            continue
+        ids = _identifiers(call)
+        used = any(_appears(text, is_path, haystack)
+                   for text, is_path in ids
+                   for haystack in (*later_text[i + 1:], comment))
+        if not used:
+            n += 1
+    return n
+
+
+def _repeats(calls: list[dict]) -> int:
+    """The calls whose name and input equal an earlier call's, each extra call counted once."""
+    seen: set[tuple[str, str]] = set()
+    n = 0
+    for call in calls:
+        key = (call.get("name"), canonical(call.get("input")))
+        if key in seen:
+            n += 1
+        seen.add(key)
+    return n
+
+
 def metrics(lines: list[dict], task) -> dict:
-    raise NotImplementedError("Part B, task 4")
+    """The five trajectory metrics of one run, by counting (slide 26), and whether it called
+    no tool at all (slide 28). `task.reference` is {"calls": n, "tools": [...]}."""
+    calls = _calls(lines)
+    expected = set(task.reference["tools"])
+    used = {c.get("name") for c in calls}
+    ends = [l for l in lines if l.get("type") == "run_end"]
+    end = ends[-1] if ends else {}
+    return {
+        "step_count": len(calls) - int(task.reference["calls"]),
+        "precision": len(used & expected) / len(used) if used else None,
+        "recall": len(expected & used) / len(expected) if expected else 1.0,
+        "repeats": _repeats(calls),
+        "orphans": _orphans(calls),
+        "no_tools": not calls,
+        "cost_usd": float((end.get("totals") or {}).get("cost_usd") or 0.0),
+        "latency_s": float(end.get("elapsed_s") or 0.0),
+    }

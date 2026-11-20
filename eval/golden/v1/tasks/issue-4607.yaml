@@ -1,0 +1,19 @@
+id: issue-4607
+kind: single
+issues:
+- 4607
+stratum: should_not_act
+decision: stop
+expect:
+  comment: null
+  labels: []
+  pr: none
+source: 'No closed-issue resolution. My reading: an advertisement for bookkeeping services (a link and
+  a discount code), nothing about Ledgerline, no question to answer and no code to point at'
+runs:
+- planned-issue-4607-s01-b4f4d0
+- workflow-issue-4607-s01-4919f5
+reference:
+  calls: 1
+  tools:
+  - issues_read

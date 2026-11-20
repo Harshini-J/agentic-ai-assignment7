@@ -1,0 +1,27 @@
+id: issue-4625
+kind: single
+issues:
+- 4625
+stratum: unusual
+decision: act
+expect:
+  comment:
+    label: feature
+    file: src/exportUtils.ts
+  labels:
+  - feature
+  pr: draft
+source: '4625''s resolution: done in #980, the option lives in toDelimited in src/exportUtils.ts; my reading
+  of the code: src/export/csv.ts only calls toDelimited (line 24), it does not hold the option'
+runs:
+- direct-issue-4625-s01-b6476b
+- planned-issue-4625-s01-29c661
+reference:
+  calls: 6
+  tools:
+  - issues_read
+  - code_search
+  - code_read_file
+  - issues_label
+  - pulls_open
+  - issues_comment

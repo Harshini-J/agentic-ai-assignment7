@@ -1,0 +1,25 @@
+id: issue-4609
+kind: single
+issues:
+- 4609
+stratum: routine
+decision: act
+expect:
+  comment:
+    label: feature
+    file: src/ingest/parser.ts
+  labels:
+  - feature
+  pr: draft
+source: '4609''s resolution: done in #969, src/ingest/parser.ts detects a semicolon separator'
+runs:
+- planned-issue-4609-s01-fe17bf
+reference:
+  calls: 6
+  tools:
+  - issues_read
+  - code_search
+  - code_read_file
+  - issues_label
+  - pulls_open
+  - issues_comment

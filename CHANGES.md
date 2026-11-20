@@ -32,3 +32,8 @@ Removals are logged like additions.
 - **Added:** nothing
 - **Removed:** nothing
 - **Constrained:** multi-agent decomposition, measured against one agent at the same budget and not merged; RepoMind stays one agent
+
+## Assignment 7
+- **Added:** an evaluation harness: a golden set of 28 tasks from RepoMind's recorded runs, in four strata with a label and a grounded check each; per-run results with pass@k and pass^k, a spread and a 95% interval, overall and per stratum, and five trajectory metrics; a model judge with known TPR and TNR on held-out labels, a corrected pass rate with a bootstrap interval, and a coin guard
+- **Removed:** single-run claims
+- **Constrained:** every later claim, to a run count, a spread and a bar set in advance

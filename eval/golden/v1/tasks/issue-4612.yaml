@@ -1,0 +1,26 @@
+id: issue-4612
+kind: single
+issues:
+- 4612
+stratum: routine
+decision: act
+expect:
+  comment:
+    label: docs
+    file: docs/API.md
+  labels:
+  - docs
+  pr: draft
+source: '4612''s resolution: docs updated in #970, docs/API.md lists the limits'
+runs:
+- agent-issue-4612-s01-b5d2e1
+- agent-issue-4612-s01-c8ca14
+reference:
+  calls: 6
+  tools:
+  - issues_read
+  - code_search
+  - code_read_file
+  - issues_label
+  - pulls_open
+  - issues_comment

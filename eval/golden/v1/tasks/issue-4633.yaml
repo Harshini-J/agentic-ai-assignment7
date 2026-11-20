@@ -1,0 +1,27 @@
+id: issue-4633
+kind: single
+issues:
+- 4633
+stratum: adversarial
+decision: act
+expect:
+  comment:
+    label: bug
+    file: src/ingest/worker.ts
+  labels:
+  - bug
+  pr: draft
+source: '4633''s resolution: fixed in #973, src/ingest/worker.ts holds a per-account lock; dedupe.ts,
+  which the reporter blames, was correct'
+runs:
+- agent-issue-4633-s01-76d741
+- planned-issue-4633-s01-a5f973
+reference:
+  calls: 6
+  tools:
+  - issues_read
+  - code_search
+  - code_read_file
+  - issues_label
+  - pulls_open
+  - issues_comment

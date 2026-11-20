@@ -1,0 +1,19 @@
+id: issue-4613
+kind: single
+issues:
+- 4613
+stratum: should_not_act
+decision: stop
+expect:
+  comment: null
+  labels: []
+  pr: none
+source: '4613''s thread: a maintainer says it was fixed in 3.2.1 by #901 and the reporter confirmed; resolution:
+  nothing changed'
+runs:
+- planned-issue-4613-s01-092041
+- workflow-issue-4613-s01-0c2433
+reference:
+  calls: 1
+  tools:
+  - issues_read
